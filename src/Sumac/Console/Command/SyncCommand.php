@@ -15,11 +15,14 @@ use Carbon\Carbon;
 
 class SyncCommand extends Command
 {
+    /** @var  \Harvest\Model\Range */
     private $range;
     private $input;
     private $output;
     private $config;
+    /** @var  \Redmine\Client */
     private $redmineClient;
+    /** @var  \Harvest\HarvestAPI */
     private $harvestClient;
 
     /**
@@ -42,14 +45,6 @@ class SyncCommand extends Command
               ]
           )
           ->setDescription('Pushes time entries from Harvest to Redmine');
-    }
-
-    /**
-     *
-     */
-    private function getProjects()
-    {
-        $x = 0;
     }
 
     /**
@@ -95,20 +90,26 @@ class SyncCommand extends Command
         }
     }
 
-    private function setHarvestClient()
+    /**
+     * Set a Harvest client for later use.
+     */
+    private function setHarvestClient($config)
     {
         $this->harvestClient = new HarvestAPI();
-        $this->harvestClient->setUser($this->config['auth']['harvest']['mail']);
-        $this->harvestClient->setPassword($this->config['auth']['harvest']['pass']);
-        $this->harvestClient->setAccount($this->config['auth']['harvest']['account']);
+        $this->harvestClient->setUser($config['auth']['harvest']['mail']);
+        $this->harvestClient->setPassword($config['auth']['harvest']['pass']);
+        $this->harvestClient->setAccount($config['auth']['harvest']['account']);
     }
 
-    private function setRedmineClient()
+    /**
+     * Set a Redmine client for later use.
+     */
+    private function setRedmineClient($config)
     {
         $this->redmineClient = new Redmine\Client(
-            $this->config['auth']['redmine']['url'],
-            $this->config['auth']['redmine']['user'],
-            $this->config['auth']['redmine']['pass']
+            $config['auth']['redmine']['url'],
+            $config['auth']['redmine']['user'],
+            $config['auth']['redmine']['pass']
         );
     }
 
@@ -117,6 +118,7 @@ class SyncCommand extends Command
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        // Set input/output for use in other methods.
         $this->input = $input;
         $this->output = $output;
 
@@ -131,12 +133,16 @@ class SyncCommand extends Command
         $this->setConfig();
 
         // Initialize the Harvest client.
-        $this->setHarvestClient();
+        $this->setHarvestClient($this->config);
 
         // Initialize the Redmine client.
-        $this->setRedmineClient();
+        $this->setRedmineClient($this->config);
 
-        // Get all project entries.
+        // Get all Harvest project entries.
+        // n.b. since `updated_since` no longer works as an argument for the
+        // Harvest REST API, we need to manually filter these by date range
+        // further below.
+        /** @var \Harvest\Model\Result $projects */
         $projects = $this->harvestClient->getProjects();
 
         $output->writeln('<info>Getting data for '.count($projects->get('data')).' projects</info>');
