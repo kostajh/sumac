@@ -22,7 +22,7 @@ class SyncCommand extends Command
     {
         $this->setName('sync')
           ->setDefinition(
-              array(
+              [
               new InputArgument(
                   'date',
                   InputArgument::OPTIONAL,
@@ -32,7 +32,7 @@ class SyncCommand extends Command
               new InputOption('update', 'u', null, 'Update existing time entries.'),
               new InputOption('strict', 's', null, 'Require project map to be defined.'),
               new InputOption('dry-run', 'd', null, 'Do a simulation of what would happen'),
-              )
+              ]
           )
           ->setDescription('Pushes time entries from Harvest to Redmine');
     }
@@ -89,6 +89,7 @@ class SyncCommand extends Command
         $entries = [];
 
         // Get entries.
+        /** @var $project \Harvest\Model\Project */
         foreach ($projects->get('data') as $project) {
             if (in_array($project->get('id'), $config['sync']['projects']['exclude'])) {
                 $output->writeln('<comment>- Skipping project '.$project->get('name').', in exclude list</comment>');
@@ -153,10 +154,10 @@ class SyncCommand extends Command
             // Strip the leading '#', and take the first entry.
             $redmine_issue_number = reset($redmine_issue_numbers);
             $redmine_issue_number = str_replace('#', '', $redmine_issue_number);
-            $redmine_time_entries = $time_api->all(array(
+            $redmine_time_entries = $time_api->all([
               'issue_id' => $redmine_issue_number,
               'limit' => 10000,
-            ));
+            ]);
             if (isset($redmine_time_entries['total_count']) && $redmine_time_entries['total_count'] > 0) {
                 // There might be a match.
                 foreach ($redmine_time_entries['time_entries'] as $rm_time_entry) {
@@ -250,7 +251,7 @@ class SyncCommand extends Command
             }
             $hours = floatval(implode('.', $hours_parts));
 
-            $params = array(
+            $params = [
               'issue_id' => $redmine_issue_number,
                 // Default to 'development'.
               'spent_on' => $entry->get('spent-at'),
@@ -258,7 +259,7 @@ class SyncCommand extends Command
               'project_id' => $redmine_issue['issue']['project']['id'],
               'hours' => $hours,
               'comments' => $entry->get('notes').' [Harvest ID #'.$entry->get('id').']',
-            );
+            ];
 
             try {
                 $redmine_user = new Redmine\Client(
@@ -285,7 +286,7 @@ class SyncCommand extends Command
                         $entry->get('hours')
                     )
                 );
-            } catch (Exception $e) {
+            } catch (\Exception $e) {
                 $output->writeln(
                     sprintf(
                         '<comment>Failed to create time entry for issue #%d!</comment>',
