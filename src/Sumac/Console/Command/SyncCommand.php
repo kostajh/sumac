@@ -6,7 +6,6 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console\Output\OutputArgument;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Yaml\Yaml;
 use Redmine;
@@ -14,41 +13,43 @@ use Harvest\HarvestAPI;
 use Harvest\Model\Range;
 use Carbon\Carbon;
 
-class SyncCommand extends Command {
-
+class SyncCommand extends Command
+{
     /**
      * {@inheritdoc}
      */
-    protected function configure() {
+    protected function configure()
+    {
         $this->setName('sync')
           ->setDefinition(
-            array(
+              array(
               new InputArgument(
-                'date',
-                InputArgument::OPTIONAL,
-                'Date to sync data for. Defaults to current day.',
-                Carbon::create()->format('Ymd')
+                  'date',
+                  InputArgument::OPTIONAL,
+                  'Date to sync data for. Defaults to current day.',
+                  Carbon::create()->format('Ymd')
               ),
               new InputOption('update', 'u', null, 'Update existing time entries.'),
               new InputOption('strict', 's', null, 'Require project map to be defined.'),
               new InputOption('dry-run', 'd', null, 'Do a simulation of what would happen'),
-            )
+              )
           )
           ->setDescription('Pushes time entries from Harvest to Redmine');
     }
 
-
     /**
      *
      */
-    private function getProjects() {
+    private function getProjects()
+    {
         $x = 0;
     }
 
     /**
      * {@inheritdoc}
      */
-    protected function execute(InputInterface $input, OutputInterface $output) {
+    protected function execute(InputInterface $input, OutputInterface $output)
+    {
         $projects = $this->getProjects();
         $range = $input->getArgument('date');
         if (strpos($range, ':') !== false) {
@@ -76,9 +77,9 @@ class SyncCommand extends Command {
 
         // Initialize the Redmine client.
         $redmine_client = new Redmine\Client(
-          $config['auth']['redmine']['url'],
-          $config['auth']['redmine']['user'],
-          $config['auth']['redmine']['pass']
+            $config['auth']['redmine']['url'],
+            $config['auth']['redmine']['user'],
+            $config['auth']['redmine']['pass']
         );
 
         // Get all project entries.
@@ -96,11 +97,11 @@ class SyncCommand extends Command {
             // In strict mode, only get time entries for project with a mapping.
             if ($input->getOption('strict') && !isset($config['sync']['projects']['map'][$project->get('id')])) {
                 $output->writeln(
-                  sprintf(
-                    '<comment>- Skipping project %s (%d), it is not mapped to a Redmine project.</comment>',
-                    $project->get('name'),
-                    $project->get('id')
-                  )
+                    sprintf(
+                        '<comment>- Skipping project %s (%d), it is not mapped to a Redmine project.</comment>',
+                        $project->get('name'),
+                        $project->get('id')
+                    )
                 );
                 continue;
             }
@@ -125,11 +126,11 @@ class SyncCommand extends Command {
         }
 
         $output->writeln(
-          sprintf(
-            '<info>Found %d entries with possible Redmine IDs and %d without</info>',
-            count($entries_to_log),
-            count($entries_without_id)
-          )
+            sprintf(
+                '<info>Found %d entries with possible Redmine IDs and %d without</info>',
+                count($entries_to_log),
+                count($entries_without_id)
+            )
         );
 
         // Get all time entries from Redmine.
@@ -139,12 +140,12 @@ class SyncCommand extends Command {
             $update = false;
             $update_id = null;
             $output->writeln(
-              sprintf(
-                '<info>Processing entry: "%s" (%d) in project %s</info>',
-                $entry->get('notes'),
-                $entry->get('id'),
-                $config['sync']['projects']['map'][$entry->get('project-id')]
-              )
+                sprintf(
+                    '<info>Processing entry: "%s" (%d) in project %s</info>',
+                    $entry->get('notes'),
+                    $entry->get('id'),
+                    $config['sync']['projects']['map'][$entry->get('project-id')]
+                )
             );
             // Load the Redmine issue and check if the Harvest time entry ID is there, if so, skip.
             $redmine_issue_numbers = [];
@@ -168,7 +169,7 @@ class SyncCommand extends Command {
                             break;
                         } else {
                             $output->writeln(
-                              '<comment>- There is already a time entry for '.$entry->get('notes').'</comment>'
+                                '<comment>- There is already a time entry for '.$entry->get('notes').'</comment>'
                             );
                             continue 2;
                         }
@@ -184,10 +185,10 @@ class SyncCommand extends Command {
                 if (!$redmine_issue || !isset($redmine_issue['issue']['project']['id'])) {
                     // Issue doesn't exist in Redmine; this is probably a GitHub issue reference.
                     $output->writeln(
-                      sprintf(
-                        '<error>- Could not find Redmine issue %d!</error>',
-                        $redmine_issue_number
-                      )
+                        sprintf(
+                            '<error>- Could not find Redmine issue %d!</error>',
+                            $redmine_issue_number
+                        )
                     );
                     continue;
                 }
@@ -200,10 +201,10 @@ class SyncCommand extends Command {
                     // The issue number doesn't belong to the Harvest project we are looking at
                     // time entries for, so continue. It's probably a GitHub issue ref.
                     $output->writeln(
-                      sprintf(
-                        '<comment>- Skipping entry for %d as it is out of range!</comment>',
-                        $entry->get('id')
-                      )
+                        sprintf(
+                            '<comment>- Skipping entry for %d as it is out of range!</comment>',
+                            $entry->get('id')
+                        )
                     );
                     continue;
                 }
@@ -212,10 +213,10 @@ class SyncCommand extends Command {
             if (!isset($config['sync']['users'][$entry->get('user-id')])) {
                 // No mapping is defined in the config, so throw an error and skip this entry.
                 $output->writeln(
-                  sprintf(
-                    '<error>No mapping is defined for user %d, please adjust config.yml</error>',
-                    $entry->get('user-id')
-                  )
+                    sprintf(
+                        '<error>No mapping is defined for user %d, please adjust config.yml</error>',
+                        $entry->get('user-id')
+                    )
                 );
                 continue;
             }
@@ -261,9 +262,9 @@ class SyncCommand extends Command {
 
             try {
                 $redmine_user = new Redmine\Client(
-                  $config['auth']['redmine']['url'],
-                  $config['auth']['redmine']['user'],
-                  $config['auth']['redmine']['pass']
+                    $config['auth']['redmine']['url'],
+                    $config['auth']['redmine']['user'],
+                    $config['auth']['redmine']['pass']
                 );
                 $redmine_user->setImpersonateUser($config['sync']['users'][$entry->get('user-id')]);
                 if (!$input->getOption('dry-run')) {
@@ -277,20 +278,20 @@ class SyncCommand extends Command {
                 }
                 $op = ($update) ? 'Updated' : 'Created';
                 $output->writeln(
-                  sprintf(
-                    '<comment>'.$op.' time entry for issue #%d with %s hours (Harvest hours: %s)</comment>',
-                    $redmine_issue_number,
-                    $hours,
-                    $entry->get('hours')
-                  )
+                    sprintf(
+                        '<comment>'.$op.' time entry for issue #%d with %s hours (Harvest hours: %s)</comment>',
+                        $redmine_issue_number,
+                        $hours,
+                        $entry->get('hours')
+                    )
                 );
             } catch (Exception $e) {
                 $output->writeln(
-                  sprintf(
-                    '<comment>Failed to create time entry for issue #%d!</comment>',
-                    $redmine_issue_number,
-                    $e->getMessage()
-                  )
+                    sprintf(
+                        '<comment>Failed to create time entry for issue #%d!</comment>',
+                        $redmine_issue_number,
+                        $e->getMessage()
+                    )
                 );
             }
         }
